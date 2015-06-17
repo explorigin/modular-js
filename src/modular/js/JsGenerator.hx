@@ -1,4 +1,4 @@
-package js.modules;
+package modular.js;
 
 #if macro
 
@@ -10,7 +10,7 @@ import haxe.ds.*;
 using Lambda;
 using StringTools;
 
-using js.modules.JsGenerator.StringExtender;
+using modular.js.JsGenerator.StringExtender;
 
 class StringExtender {
 	static public function asJSFieldAccess(s:String, api:JSGenApi) {
