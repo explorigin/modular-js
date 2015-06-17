@@ -14,7 +14,7 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 
   ```
   -lib modular-js
-  --macro js.modular.JsGenerator.use()
+  --macro modular.JsGenerator.use()
   ```
 
 ## FAQ
