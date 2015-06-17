@@ -1,0 +1,13 @@
+{
+    "name": "modular-js",
+    "url" : "https://github.com/explorigin/modular-js.git",
+    "license": "MIT",
+    "tags": ["js", "web", "html5", "haxe", "javascript", "macro", "html", "ufront"],
+    "description": "This is a toolkit to export Javascript-target Haxe to AMD modules.",
+    "version": "0.8.0",
+    "classPath": "src/",
+    "releasenote": "AMD modules work but there are some optimizations that are neglected.",
+    "contributors": ["explorigin"],
+    "dependencies": {
+    }
+}
