@@ -26,7 +26,7 @@ Quite simply, the modular-js generator will output AMD modules for each class in
   - The vast majority of websites have multiple entry-points. Javascript modules allow you to share code between these entry-points and with web-workers.
   - There is less code to push to the browser when you publish updates.
   - Debugging is easier because files are logically separated.
-  - Processing your Javascript is easier with tools like [Webpack]() or [Browserify]().
+  - Processing your Javascript is easier with tools like [Webpack](http://webpack.github.io/) or [Browserify](http://browserify.org/).
 
 2. Won't loading multiple files make my website slower?
 
