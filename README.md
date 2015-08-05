@@ -30,7 +30,7 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 
 2. Won't loading multiple files make my website slower?
 
-  In short, no.  The longer answer is, if your server is configured to use SPDY or HTTPS2 and your target browser audience [supports one of them](http://caniuse.com/#feat=spdy), then the slow-down caused by multiple files is not even worth mentioning. To see learn more about techniques of making your website load quickly, watch Jake Archibald's talk [here](https://vimeo.com/125479288).
+  In short, no.  The longer answer is, if your server is configured to use SPDY or HTTPS2 and your target browser audience [supports one of them](http://caniuse.com/#feat=spdy), then the slow-down caused by multiple files is not even worth mentioning. To learn more about techniques of making your website load quickly, watch Jake Archibald's talk [here](https://vimeo.com/125479288).
 
 ## Caveats
 
