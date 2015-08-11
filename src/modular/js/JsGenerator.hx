@@ -10,33 +10,6 @@ import haxe.ds.*;
 using Lambda;
 using StringTools;
 
-using modular.js.JsGenerator.StringExtender;
-
-class StringExtender {
-	static public function asJSFieldAccess(s:String, api:JSGenApi) {
-		return api.isKeyword(s) ? '["' + s + '"]' : "." + s;
-	}
-	static public function asJSPropertyAccess(s:String, api:JSGenApi) {
-		return api.isKeyword(s) ? '"' + s + '"' : s;
-	}
-	static public function indent(s:String, level:Int) {
-		var iStr = '';
-		while (level > 0) {
-			iStr += '\t';
-			level -= 1;
-		}
-		return s.replace('\n', '\n$iStr');
-	}
-	static public function dedent(s:String, level:Int) {
-		var iStr = '';
-		while (level > 0) {
-			iStr += '\t';
-			level -= 1;
-		}
-		return s.replace('\n$iStr', '\n');
-	}
-}
-
 enum Forbidden {
 	prototype;
 	__proto__;
@@ -50,436 +23,6 @@ enum StdTypes {
 	Class;
 	Enum;
 	Dynamic;
-}
-
-enum JSTypes {
-	Array;
-	String;
-	Object;
-	Date;
-	XMLHttpRequest;
-	Math;
-}
-
-interface IField {
-	var name:String;
-	var code:String;
-	var path:String;
-	var isStatic:Bool;
-	var dependencies:StringMap<String>;
-	public function getCode():String;
-}
-
-interface IKlass {
-	var name:String;
-	var init:String;
-	var code:String;
-	var superClass:String;
-	var interfaces:Array<String>;
-	var dependencies:StringMap<String>;
-	public function getCode():String;
-	var members: StringMap<IField>;
-}
-
-interface IPackage {
-	var name:String;
-	var code:String;
-	var members: StringMap<IKlass>;
-}
-
-class Module {
-	public var name:String = "";
-	public var path:String = "";
-	public var dependencies: StringMap<String> = new StringMap<String>();
-	public var code: String = "";
-	public var isStatic:Bool = false;
-
-	public var gen:JsGenerator;
-
-	public function new(_gen) {
-		gen = _gen;
-	}
-
-	function addDependency(dep:String) {
-		gen.addDependency(dep, this);
-	}
-
-	inline function _print(b:StringBuf, str:String){
-		b.add(str);
-	}
-
-	inline function _newline(b:StringBuf) {
-		b.add(";\n");
-	}
-
-	function formatFieldName(name:String):String {
-		return gen.api.isKeyword(name) ? '["' + name + '"]' : "." + name;
-	}
-
-	public var fieldName(get, never):String;
-
-	function get_fieldName() {
-		return name.asJSFieldAccess(gen.api);
-	}
-}
-
-class Field extends Module implements IField {
-	public var fieldAccessName:String;
-	public var propertyAccessName:String;
-	public var init: String;
-
-	public function getCode() {
-		 return code;
-	}
-
-	public function build(f: ClassField, classPath:String) {
-		name = f.name;
-		path = '$classPath.$name';
-		fieldAccessName = name.asJSFieldAccess(gen.api);
-		propertyAccessName = name.asJSPropertyAccess(gen.api);
-		var e = f.expr();
-		if( e == null ) {
-			code = 'null';
-		} else {
-			code = gen.api.generateValue(e);
-		}
-		for (dep in gen.getDependencies().keys()) {
-			addDependency(dep);
-		}
-	}
-}
-
-class Klass extends Module implements IKlass {
-	public var members: StringMap<IField> = new StringMap();
-	public var init: String;
-
-	public var superClass:String = null;
-	public var interfaces:Array<String> = new Array();
-	public var properties:Array<String> = new Array();
-
-	public function getCode() {
-		var t = new haxe.Template('
-// Class: ::path::
-::if (dependencies.length > 0)::
-// Dependencies:
-	::foreach dependencies::
-//	::__current__::
-	::end::
-::end::
-::if (overrideBase)::::if (useHxClasses)::$$hxClasses["::path::"] = ::className::::end::
-::else::var ::className:: = ::if (useHxClasses == true)::$$hxClasses["::path::"] = ::end::::code::;
-::if (interfaces != "")::::className::.__interfaces__ = [::interfaces::];
-::end::::if (superClass != null)::::className::.__super__ = ::superClass::;
-::className::.prototype = $$extend(::superClass::.prototype, {
-::else::::className::.prototype = {
-::end::::if (propertyString != "")::	"__properties__": {::propertyString::},
-::end::::foreach members::	::propertyAccessName::: ::code::,
-::end::	__class__: ::className::
-}::if (superClass != null)::)::end::;
-::className::.__name__ = "::path::";::end::
-::foreach statics::::className::::fieldAccessName:: = ::code::;
-::end::::if (init != "")::// Initialization Code
-::init::::end::
-');
-		function filterMember(member:IField) {
-			var f = new Field(gen);
-			f.name = member.name;
-			f.fieldAccessName = f.name.asJSFieldAccess(gen.api);
-			f.propertyAccessName = f.name.asJSPropertyAccess(gen.api);
-			f.isStatic = member.isStatic;
-			f.code = member.getCode();
-			if (!f.isStatic) {
-				f.code = f.code.indent(1);
-			}
-			return f;
-		}
-
-		var initCode = "";
-		if (init != null) {
-			initCode = init.trim().dedent(1);
-		}
-
-		var data = {
-			overrideBase: Reflect.hasField(JSTypes, name),
-			className: name,
-			path: path,
-			code: code,
-			useHxClasses: gen.hasFeature('Type.resolveClass') || gen.hasFeature('Type.resolveEnum'),
-			init: initCode,
-			dependencies: [for (key in dependencies.keys()) key],
-			interfaces: interfaces.join(','),
-			superClass: superClass,
-			propertyString: [for (prop in properties) '"$prop":"$prop"'].join(','),
-			members: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return !m.isStatic; }),
-			statics: [for (member in members.iterator()) filterMember(member)].filter(function(m) { return m.isStatic; })
-		};
-		return t.execute(data);
-	}
-
-	public function addField(c: ClassType, f: ClassField) {
-		gen.checkFieldName(c, f);
-		gen.setContext(path + '.' + f.name);
-
-		if(f.name.indexOf("get_") == 0 || f.name.indexOf("set_") == 0)
-		{
-			properties.push(f.name);
-		}
-		switch( f.kind )
-		{
-			case FVar(r, _):
-				if( r == AccResolve ) return;
-			default:
-		}
-
-		var field = new Field(gen);
-		field.build(f, path);
-		for (dep in field.dependencies.keys()) {
-			addDependency(dep);
-		}
-		members.set(f.name, field);
-	}
-
-	public function addStaticField(c: ClassType, f: ClassField) {
-		gen.checkFieldName(c, f);
-		gen.setContext(path + '.' + f.name);
-		var field = new Field(gen);
-		field.build(f, path);
-		field.isStatic = true;
-		for (dep in field.dependencies.keys()) {
-			addDependency(dep);
-		}
-		members.set(field.name, field);
-	}
-
-	public function build(c: ClassType) {
-		name = c.name;
-		path = gen.getPath(c);
-
-		gen.setContext(path);
-		if (c.init != null)
-			init = gen.api.generateStatement(c.init);
-
-		if( c.constructor != null ) {
-			code = gen.api.generateStatement(c.constructor.get().expr());
-		} else {
-			code = "function() {}";
-		}
-
-		// Add Haxe type metadata
-		if( c.interfaces.length > 0 ) {
-			interfaces = [for (i in c.interfaces) gen.getTypeFromPath(gen.getPath(i.t.get()))];
-		}
-		if( c.superClass != null ) {
-			gen.hasClassInheritance = true;
-			superClass = gen.getTypeFromPath(gen.getPath(c.superClass.t.get()));
-		}
-		for (dep in gen.getDependencies().keys()) {
-			addDependency(dep);
-		}
-
-		if (!c.isExtern) {
-			for( f in c.fields.get() ) {
-				addField(c, f);
-			}
-
-			for( f in c.statics.get() ) {
-				addStaticField(c, f);
-			}
-		}
-	}
-}
-
-
-class EnumModuleField extends Module implements IField {
-	var isFunction:Bool;
-	public var init: String;
-	var index:Int;
-	var enumName:String;
-	var argNames:String;
-	public var fieldAccessName:String;
-
-	public function getCode() {
-		var t = new haxe.Template('function(::argNames::) {
-	var $$x = [::quoteName::,::index::::if (isFunction)::,::argNames::::end::];
-	$$x.__enum__ = ::enumName::;
-	return $$x;
-}::if (!isFunction)::()::end::');
-
-		var enumNameElements = enumName.split('.');
-		var data = {
-			argNames: argNames,
-			index: index,
-			isFunction: isFunction,
-			enumName: enumNameElements[enumNameElements.length - 1],
-			quoteName: gen.api.quoteString(name)
-		};
-
-		return t.execute(data);
-	}
-
-	public function build(e: EnumField, classPath:String) {
-		name = e.name;
-		fieldAccessName = name.asJSFieldAccess(gen.api);
-		enumName = classPath;
-		path = '$classPath.$name';
-		index = e.index;
-
-		switch( e.type )
-		{
-			case TFun(args, _):
-				argNames = args.map(function(a) return a.name).join(",");
-				isFunction = true;
-			default:
-				isFunction = false;
-				argNames = "";
-		}
-	}
-}
-
-
-class EnumModule extends Module implements IKlass {
-	var names:String;
-	var constructs:String;
-	public var init: String;
-	public var superClass:String;
-	public var interfaces:Array<String> = [];
-	public var members:StringMap<IField> = new StringMap();
-
-	public function getCode() {
-		var t = new haxe.Template('
-// Enum: ::path::
-::if (dependencies.length > 0)::
-// Dependencies:
-	::foreach dependencies::
-//	::__current__::
-	::end::
-::end::
-var ::enumName:: = { __ename__ : [::names::], __constructs__ : [::constructs::] };
-::if (code != "")::::enumName::.__meta__ = ::code::;::end::
-::foreach members::
-::enumName::::fieldAccessName:: = ::code::;
-::end::
-');
-		function filterMember(member:IField) {
-			var f = new EnumModuleField(gen);
-			f.name = member.name;
-			f.fieldAccessName = f.name.asJSFieldAccess(gen.api);
-			f.code = member.getCode();
-			return f;
-		}
-
-		var data = {
-			enumName: name,
-			code: code,
-			path: path,
-			dependencies: [for (key in dependencies.keys()) key],
-			names: names,
-			constructs: constructs,
-			members: [for (member in members.iterator()) filterMember(member)]
-		};
-
-		return t.execute(data);
-	}
-
-	public function addField(e: EnumType, construct: EnumField) {
-		gen.checkFieldName(e, construct);
-		gen.setContext(path + '.' + e.name);
-		var field = new EnumModuleField(gen);
-		field.build(construct, path);
-
-		members.set(construct.name, field);
-	}
-
-	public function build(e: EnumType) {
-		name = e.name;
-		path = gen.getPath(e);
-		gen.setContext(path);
-
-		names = path.split(".").map(gen.api.quoteString).join(",");
-		constructs = e.names.map(gen.api.quoteString).join(",");
-
-		for( c in e.constructs.keys() ) {
-			addField(e, e.constructs.get(c));
-		}
-		var meta = gen.api.buildMetaData(e);
-		if( meta != null ) {
-			code = gen.api.generateStatement(meta);
-		}
-	}
-}
-
-
-class Package extends Module implements IPackage {
-	public var isMain:Bool = false;
-	public var members: StringMap<IKlass> = new StringMap();
-
-	public function isEmpty():Bool {
-		return !members.keys().hasNext() && code == "";
-	}
-
-	public function collectDependencies() {
-		function hasDependency(key) {
-			return ! dependencies.exists(key);
-		}
-
-		for( member in members ) {
-			for( dep in [for (key in member.dependencies.keys()) key] ) {
-				gen.addDependency(dep, this);
-				member.dependencies.remove(dep);
-			}
-		}
-	}
-
-	public function getCode() {
-		var pre = new haxe.Template('// Package: ::packageName::
-define([::dependencyNames::],
-	   function (::dependencyVars::) {
-');
-
-		//  Collect the package's dependencies into one array
-		var allDeps = new StringMap();
-		var memberValues = [for (member in members.iterator()) member];
-		var depKeys = [for (k in dependencies.keys()) k];
-
-		function formatMember(m: IKlass) {
-			var name = m.name;
-			var access = m.name.asJSPropertyAccess(gen.api);
-
-			return '$access: $name';
-		}
-
-		var data = {
-			packageName: name.replace('.', '_'),
-			path: path,
-			dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '_'))].join(', '),
-			dependencyVars: [for (k in depKeys) k.replace('.', '_')].join(', '),
-			members: [for (member in memberValues) formatMember(member)].join(',\n\t\t'),
-			singleMember: ""
-		};
-		code = pre.execute(data);
-
-		for (member in members) {
-			code += member.getCode().indent(1);
-		}
-
-		var post:haxe.Template;
-
-		if (memberValues.length == 1) {
-			data.singleMember = memberValues[0].name;
-			post = new haxe.Template('return ::singleMember::;
-});
-');
-		} else {
-			post = new haxe.Template('return {
-		::members::
-	};
-});
-');
-		}
-
-		code += post.execute(data);
-		return code;
-	}
 }
 
 
@@ -511,7 +54,6 @@ require([::dependencyNames::],
 		return _code;
 	}
 }
-
 
 class JsGenerator
 {
@@ -842,6 +384,20 @@ class JsGenerator
 		// Run through each package, making sure that it has collected the dependencies of it's members.
 		for (pack in packages) { pack.collectDependencies(); }
 
+		var mainPack:MainPackage;
+		if(api.main != null) {
+			setContext("main");
+
+			mainPack = new MainPackage(this);
+			mainPack.name = 'main';
+			mainPack.path = 'main';
+			mainPack.code = api.generateStatement(api.main);
+			for (dep in getDependencies().keys()) {
+				addDependency(dep, mainPack);
+			}
+			packages.set('main', mainPack);
+		}
+
 		purgeEmptyPackages();
 		cleanPackageDependencies("Assuming a global dependency.");
 		joinCyclicPackages();
@@ -856,20 +412,6 @@ class JsGenerator
 		// Replace type comments
 		for( pack in packages.iterator() ) {
 			replaceTypeComments(pack);
-		}
-
-		var mainPack:MainPackage;
-		if(api.main != null) {
-			setContext("main");
-			mainPack = new MainPackage(this);
-			mainPack.name = 'main';
-			mainPack.path = 'main';
-			mainPack.code = api.generateStatement(api.main);
-			for (dep in getDependencies().keys()) {
-				addDependency(dep, mainPack);
-			}
-			packages.set('main', mainPack);
-			replaceTypeComments(mainPack);
 		}
 
 		cleanPackageDependencies("It has been superceded by another dependency.");
@@ -928,27 +470,23 @@ $bind = function $bind(o,m) {
 
 		// Loop through the created packages.
 		for( pack in packages.iterator() ) {
-			if (pack == mainPack)
-				continue;
+			var filename:String;
 
-			curBuf = new StringBuf();
-			var filename = pack.name.replace('.', '_');
+			if (pack == mainPack) {
+				curBuf = mainBuf;
+				filename = api.outputFile.substring(api.outputFile.lastIndexOf("/"), api.outputFile.lastIndexOf("."));
+			} else {
+				curBuf = new StringBuf();
+				filename = pack.name.replace('.', '_');
+			}
 
 			print(pack.getCode());
+
 			// Put it all in a file.
 			var filePath = api.outputFile.substring(0, api.outputFile.lastIndexOf("/"));
 			filePath += '/$filename.js';
 			sys.io.File.saveContent(filePath, curBuf.toString());
 		}
-		print("\n");
-
-		curBuf = mainBuf;
-
-		if( api.main != null ) {
-			print(mainPack.getCode());
-		}
-
-		sys.io.File.saveContent(api.outputFile, mainBuf.toString());
 	}
 
 	#if macro

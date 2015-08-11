@@ -14,7 +14,6 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 
   ```
   -lib modular-js
-  --macro modular.js.JsGenerator.use()
   ```
 
 ## FAQ
@@ -39,7 +38,7 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 
 ## TODO
 
- - Support external dependencies
+ - Support external dependencies (with @:jsRequire)
  - Detect and filter for features:
    - may_print_enum
    - use.iterator
