@@ -7,6 +7,7 @@ import haxe.macro.Expr;
 import haxe.macro.*;
 import haxe.ds.*;
 import haxe.io.Path;
+import sys.FileSystem;
 
 using Lambda;
 using StringTools;
@@ -481,20 +482,21 @@ $bind = function $bind(o,m) {
 
 		// Loop through the created packages.
 		for( pack in packages.iterator() ) {
-			var filename:String;
+			var filePath:String;
 
 			if (pack == mainPack) {
 				curBuf = mainBuf;
-				filename = api.outputFile.substring(api.outputFile.lastIndexOf("/"), api.outputFile.lastIndexOf("."));
+				filePath = FileSystem.absolutePath(api.outputFile);
 			} else {
 				curBuf = new StringBuf();
-				filename = pack.name.replace('.', '_');
+				var outputDir = Path.directory(FileSystem.absolutePath(api.outputFile));
+				var filename = pack.name.replace('.', '_');
+				filePath = Path.join([outputDir, '$filename.js']);
 			}
 
 			print(pack.getCode());
 
 			// Put it all in a file.
-			var filePath = Path.addTrailingSlash(Path.directory(api.outputFile)) + '$filename.js';
 			sys.io.File.saveContent(filePath, curBuf.toString());
 		}
 	}
