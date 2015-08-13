@@ -6,6 +6,7 @@ import haxe.macro.Type;
 import haxe.macro.Expr;
 import haxe.macro.*;
 import haxe.ds.*;
+import haxe.io.Path;
 
 using Lambda;
 using StringTools;
@@ -483,8 +484,7 @@ $bind = function $bind(o,m) {
 			print(pack.getCode());
 
 			// Put it all in a file.
-			var filePath = api.outputFile.substring(0, api.outputFile.lastIndexOf("/"));
-			filePath += '/$filename.js';
+			var filePath = Path.addTrailingSlash(Path.directory(api.outputFile)) + '$filename.js';
 			sys.io.File.saveContent(filePath, curBuf.toString());
 		}
 	}
