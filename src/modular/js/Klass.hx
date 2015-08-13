@@ -61,7 +61,7 @@ class Klass extends Module implements IKlass {
         }
 
         var data = {
-            overrideBase: Reflect.hasField(JSTypes, name),
+            overrideBase: gen.isJSExtern(name),
             className: name,
             path: path,
             code: code,

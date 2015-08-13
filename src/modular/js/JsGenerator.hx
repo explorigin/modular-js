@@ -70,6 +70,7 @@ class JsGenerator
 	var curBuf : StringBuf;
 	var mainBuf : StringBuf;
 	var external : Bool;
+	var externNames = new StringMap<Bool>();
 	public var hasClassInheritance: Bool = false;
 	var typeFinder = ~/\/\* "([A-Za-z0-9._]+)" \*\//g;
 
@@ -109,13 +110,8 @@ class JsGenerator
 
 		if (container == null) {
 			dependencies.set(dep, name);
-		} else if (! Reflect.hasField(JSTypes, dep)) {
-			if (dep != container.path) {
-				container.dependencies.set(name, name);
-			} else {
-			}
-		} else {
-			return "";
+		} else if (dep != container.path) {
+			container.dependencies.set(name, name);
 		}
 		return name;
 	}
@@ -125,25 +121,39 @@ class JsGenerator
 		var origName = switch(t)
 		{
 			case TInst(c, _):
-				getPath(c.get());
+				var name = getPath(c.get());
+				if (c.get().isExtern) {
+					externNames.set(name, true);
+				}
+				name;
 			case TEnum(e, _):
 				getPath(e.get());
 			case TAbstract(c, _):
-				c.get().name;
+				var name = getPath(c.get());
+				if (c.get().isExtern) {
+					externNames.set(name, true);
+				}
+				name;
 			default: throw "assert: " + t;
 		};
 
 		return getTypeFromPath(origName);
 	}
 
+	public function isJSExtern(name: String): Bool {
+		return externNames.exists(name);
+	}
+
 	public function getTypeFromPath(origName: String) {
 		if (Reflect.hasField(StdTypes, origName)) {
 			addDependency("Std");
 		} else {
-			addDependency(origName);
+			if (!isJSExtern(origName)) {
+				addDependency(origName);
+			}
 		}
 
-		if (Reflect.hasField(JSTypes, origName)) {
+		if (isJSExtern(origName)) {
 			return origName;
 		} else {
 			return '/* "$origName" */';
@@ -238,7 +248,7 @@ class JsGenerator
 
 	function purgeEmptyPackages() {
 		// Dispose of Empty Packages
-		var emptyPackages = [for (k in packages.keys()) k].filter(function(pName) { return packages.get(pName).isEmpty(); });
+		var emptyPackages = [for (k in packages.keys()) if (packages.get(k).isEmpty()) k];
 		if (emptyPackages.length > 0) {
 			Context.warning('' + emptyPackages + ' are all empty packages.', Context.currentPos());
 			for (name in emptyPackages) {
