@@ -72,11 +72,9 @@ class JsGenerator
 	var mainBuf : StringBuf;
 	var external : Bool;
 	var externNames = new StringMap<Bool>();
-	public var hasClassInheritance: Bool = false;
 	var typeFinder = ~/\/\* "([A-Za-z0-9._]+)" \*\//g;
 
-	public function new(api)
-	{
+	public function new(api) {
 		this.api = api;
 		mainBuf = new StringBuf();
 
@@ -106,6 +104,7 @@ class JsGenerator
 		#end
 
 	}
+
 	public function addDependency(dep:String, ?container:Module) {
 		var name = dep;
 
@@ -117,8 +116,7 @@ class JsGenerator
 		return name;
 	}
 
-	function getType( t : Type )
-	{
+	function getType( t : Type ) {
 		var origName = switch(t)
 		{
 			case TInst(c, _):
@@ -188,8 +186,7 @@ class JsGenerator
 		return depCopy;
 	}
 
-	function traverseClass( c : ClassType )
-	{
+	function traverseClass( c : ClassType ) {
 		var pack = new Package(this);
 		var kls = new Klass(this);
 		api.setCurrentClass(c);
@@ -204,8 +201,7 @@ class JsGenerator
 		pack.members.set(c.name, kls);
 	}
 
-	function traverseEnum( e : EnumType )
-	{
+	function traverseEnum( e : EnumType ) {
 		var kls = new EnumModule(this);
 		kls.build(e);
 		var pack = new Package(this);
@@ -218,8 +214,7 @@ class JsGenerator
 		pack.members.set(kls.name, kls);
 	}
 
-	function traverseType( t : Type )
-	{
+	function traverseType( t : Type ) {
 		switch( t )
 		{
 			case TInst(c, _):
@@ -388,8 +383,7 @@ class JsGenerator
 		}
 	}
 
-	public function generate()
-	{
+	public function generate() {
 		// Parse types and build packages
 		api.types.map(traverseType);
 
@@ -469,7 +463,7 @@ $bind = function $bind(o,m) {
 }\n");
 		// }
 
-		if (hasClassInheritance) {
+		if (hasFeature("class.inheritance")) {
 			print("$extend = function $extend(from, fields) {
 	function Inherit() {};
 	Inherit.prototype = from;
@@ -502,8 +496,7 @@ $bind = function $bind(o,m) {
 	}
 
 	#if macro
-	public static function use()
-	{
+	public static function use() {
 		Compiler.setCustomJSGenerator(function(api) new JsGenerator(api).generate());
 	}
 	#end
