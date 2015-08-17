@@ -12,11 +12,15 @@ using modular.js.StringExtender;
 
 class Klass extends Module implements IKlass {
     public var members: StringMap<IField> = new StringMap();
-    public var init: String;
+    public var init = "";
 
     public var superClass:String = null;
     public var interfaces:Array<String> = new Array();
     public var properties:Array<String> = new Array();
+
+    public function isEmpty() {
+        return code.trim() == "" && !members.keys().hasNext() && init.trim() == "";
+    }
 
     public function getCode() {
         var t = new haxe.Template('

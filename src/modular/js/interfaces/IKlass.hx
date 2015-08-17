@@ -10,6 +10,7 @@ interface IKlass {
     var interfaces:Array<String>;
     var dependencies:StringMap<String>;
     public function getCode():String;
+    public function isEmpty():Bool;
     var members: StringMap<IField>;
 }
 

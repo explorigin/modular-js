@@ -6,6 +6,7 @@ import haxe.ds.StringMap;
 import modular.js.interfaces.IKlass;
 import modular.js.interfaces.IField;
 
+using StringTools;
 using modular.js.StringExtender;
 
 
@@ -16,6 +17,10 @@ class EnumModule extends Module implements IKlass {
     public var superClass:String;
     public var interfaces:Array<String> = [];
     public var members:StringMap<IField> = new StringMap();
+
+    public function isEmpty() {
+        return code == "" && !members.keys().hasNext() && init.trim() == "";
+    }
 
     public function getCode() {
         var t = new haxe.Template('

@@ -12,7 +12,7 @@ class Package extends Module implements IPackage {
     public var members: StringMap<IKlass> = new StringMap();
 
     public function isEmpty():Bool {
-        return !members.keys().hasNext() && code == "";
+        return [for (m in members) if (!m.isEmpty()) true].length == 0 && code.trim() == "";
     }
 
     public function collectDependencies() {
