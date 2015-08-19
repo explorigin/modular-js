@@ -18,15 +18,6 @@ enum Forbidden {
 	constructor;
 }
 
-enum StdTypes {
-	Int;
-	Float;
-	Bool;
-	Class;
-	Enum;
-	Dynamic;
-}
-
 
 class MainPackage extends Package {
 	public override function getCode() {
@@ -61,28 +52,23 @@ class JsGenerator
 {
 	public var api : JSGenApi;
 
-	var packages : StringMap<Package>;
-	var forbidden : StringMap<Bool>;
+	var packages = new StringMap<Package>();
+	var forbidden = new StringMap<Bool>();
 	var baseJSModules : haxe.ds.StringMap<Bool>;
-	public var currentContext: Array<String>;
+	public var currentContext = new Array<String>();
 	var dependencies: StringMap<String> = new StringMap();
 	var assumedFeatures: StringMap<Bool> = new StringMap();
 
 	var curBuf : StringBuf;
-	var mainBuf : StringBuf;
-	var external : Bool;
+	var mainBuf = new StringBuf();
+	var external = false;
 	var externNames = new StringMap<Bool>();
 	var typeFinder = ~/\/\* "([A-Za-z0-9._]+)" \*\//g;
 
 	public function new(api) {
 		this.api = api;
-		mainBuf = new StringBuf();
 
 		curBuf = mainBuf;
-		currentContext = [];
-		packages = new StringMap<Package>();
-		forbidden = new StringMap();
-		external = false;
 
 		api.setTypeAccessor(getType);
 	}
@@ -124,6 +110,7 @@ class JsGenerator
 				if (c.get().isExtern) {
 					externNames.set(name, true);
 				}
+
 				name;
 			case TEnum(e, _):
 				getPath(e.get());
@@ -131,6 +118,9 @@ class JsGenerator
 				var name = getPath(c.get());
 				if (c.get().isExtern) {
 					externNames.set(name, true);
+				}
+				if (c.get().meta.has(":coreType")) {
+					return name;
 				}
 				name;
 			default: throw "assert: " + t;
@@ -144,17 +134,10 @@ class JsGenerator
 	}
 
 	public function getTypeFromPath(origName: String) {
-		if (Reflect.hasField(StdTypes, origName)) {
-			addDependency("Std");
-		} else {
-			if (!isJSExtern(origName)) {
-				addDependency(origName);
-			}
-		}
-
 		if (isJSExtern(origName)) {
 			return origName;
 		} else {
+			addDependency(origName);
 			return '/* "$origName" */';
 		}
 	}
@@ -407,13 +390,6 @@ class JsGenerator
 		purgeEmptyPackages();
 		cleanPackageDependencies("Assuming a global dependency.");
 		joinCyclicPackages();
-
-		// Special case, merge Math into Std
-		if (packages.exists('Math') && packages.exists('Std')) {
-			var stdPackage = joinPackages(packages.get('Math'), packages.get('Std'));
-			packages.set('Math', stdPackage);
-			packages.set('Std', stdPackage);
-		}
 
 		// Replace type comments
 		for( pack in packages.iterator() ) {
