@@ -73,6 +73,10 @@ class JsGenerator
 		api.setTypeAccessor(getType);
 	}
 
+	public function addFeature(name:String):Bool {
+		return api.addFeature(name);
+	}
+
 	public function hasFeature(name:String):Bool {
 		var d = Context.definedValue(name);
 		if (d != null) {
@@ -113,6 +117,7 @@ class JsGenerator
 
 				name;
 			case TEnum(e, _):
+				addFeature("has.enum");
 				getPath(e.get());
 			case TAbstract(c, _):
 				var name = getPath(c.get());
@@ -398,14 +403,12 @@ class JsGenerator
 
 		cleanPackageDependencies("It has been superceded by another dependency.");
 
-		print("window.$hxClasses = {};");
-		print('if (!window.require) alert("You must include an AMD loader such as RequireJS.");\n');
-
-		// if (hasFeature("may_print_enum")) {
+		if (hasFeature("has.enum")) {
 			print("$estr = function $estr() { return js.Boot.__string_rec(this, ''); };\n");
-		// }
+		}
 
-		// if (hasFeature("use.iterator")) {
+		if (hasFeature("use.$iterator")) {
+			addFeature("use.$bind");
 			print("function $iterator(o) {
 	if( o instanceof Array ) {
 		return function() {
@@ -414,9 +417,9 @@ class JsGenerator
 	}
 	return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator;
 }\n");
-		// }
+		}
 
-		// if (hasFeature("use.bind")) {
+		if (hasFeature("use.$bind")) {
 			print("var $_, $fid = 0;
 $bind = function $bind(o,m) {
 	if( m == null ) { return null; }
@@ -437,7 +440,7 @@ $bind = function $bind(o,m) {
 	}
 	return f;
 }\n");
-		// }
+		}
 
 		if (hasFeature("class.inheritance")) {
 			print("$extend = function $extend(from, fields) {

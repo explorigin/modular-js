@@ -76,6 +76,15 @@ define([::dependencyNames::],
         }
 
         code += post.execute(data);
+
+        if (code.indexOf("$bind(") != -1) {
+            gen.addFeature("use.$bind");
+        }
+
+        if (code.indexOf("$iterator(") != -1) {
+            gen.addFeature("use.$iterator");
+        }
+
         return code;
     }
 }

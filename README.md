@@ -39,10 +39,6 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 ## TODO
 
  - Support external dependencies (with @:jsRequire)
- - Detect and filter for features:
-   - may_print_enum
-   - use.iterator
-   - use.bind
  - Meta-data to customize module building since DCE is a little too strong
  - ES6 Modules
  - CommonJS Modules
