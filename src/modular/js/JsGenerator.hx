@@ -403,6 +403,10 @@ class JsGenerator
 
 		cleanPackageDependencies("It has been superceded by another dependency.");
 
+		if (hasFeature('Type.resolveClass') || hasFeature('Type.resolveEnum')) {
+			print("window.$hxClasses = {};");
+		}
+
 		if (hasFeature("has.enum")) {
 			print("$estr = function $estr() { return js.Boot.__string_rec(this, ''); };\n");
 		}
