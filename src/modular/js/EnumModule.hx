@@ -13,7 +13,7 @@ using modular.js.StringExtender;
 class EnumModule extends Module implements IKlass {
     var names:String;
     var constructs:String;
-    public var init: String;
+    public var init = "";
     public var superClass:String;
     public var interfaces:Array<String> = [];
     public var members:StringMap<IField> = new StringMap();

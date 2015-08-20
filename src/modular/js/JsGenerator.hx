@@ -202,9 +202,8 @@ class JsGenerator
 		pack.members.set(kls.name, kls);
 	}
 
-	function traverseType( t : Type ) {
-		switch( t )
-		{
+	function traverseType(t: Type) {
+		switch(t) {
 			case TInst(c, _):
 				var c = c.get();
 				if( !c.isExtern || ["Math", "Number"].indexOf(c.name) != -1) {
@@ -458,17 +457,16 @@ $bind = function $bind(o,m) {
 		}
 
 		// Loop through the created packages.
-		for( pack in packages.iterator() ) {
+		for( pack in packages ) {
 			var filePath:String;
 
-			if (pack == mainPack) {
-				curBuf = mainBuf;
-				filePath = FileSystem.absolutePath(api.outputFile);
-			} else {
+			if (pack != mainPack) {
 				curBuf = new StringBuf();
 				var outputDir = Path.directory(FileSystem.absolutePath(api.outputFile));
 				var filename = pack.name.replace('.', '_');
 				filePath = Path.join([outputDir, '$filename.js']);
+			} else {
+				continue;
 			}
 
 			print(pack.getCode());
@@ -476,6 +474,23 @@ $bind = function $bind(o,m) {
 			// Put it all in a file.
 			sys.io.File.saveContent(filePath, curBuf.toString());
 		}
+
+		var code = mainPack.getCode();
+		curBuf = mainBuf;
+
+		for( pack in packages ) {
+			for (member in pack.members) {
+				if (member.init != "") {
+					print('\n// Init code for ${member.name}\n');
+					print(member.init);
+					print('\n');
+				}
+			}
+		}
+		print('\n');
+
+		print(code);
+		sys.io.File.saveContent(FileSystem.absolutePath(api.outputFile), curBuf.toString());
 	}
 
 	#if macro

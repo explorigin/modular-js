@@ -1,5 +1,6 @@
 package modular.js;
 
+import haxe.macro.*;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.ClassField;
 import haxe.ds.StringMap;
@@ -43,8 +44,7 @@ class Klass extends Module implements IKlass {
 }::if (superClass != null)::)::end::;
 ::className::.__name__ = "::path::";::end::
 ::foreach statics::::className::::fieldAccessName:: = ::code::;
-::end::::if (init != "")::// Initialization Code
-::init::::end::
+::end::
 ');
         function filterMember(member:IField) {
             var f = new Field(gen);
@@ -59,18 +59,12 @@ class Klass extends Module implements IKlass {
             return f;
         }
 
-        var initCode = "";
-        if (init != null) {
-            initCode = init.trim().dedent(1);
-        }
-
         var data = {
             overrideBase: gen.isJSExtern(name),
             className: name,
             path: path,
             code: code,
             useHxClasses: gen.hasFeature('Type.resolveClass') || gen.hasFeature('Type.resolveEnum'),
-            init: initCode,
             dependencies: [for (key in dependencies.keys()) key],
             interfaces: interfaces.join(','),
             superClass: superClass,
@@ -121,8 +115,9 @@ class Klass extends Module implements IKlass {
         path = gen.getPath(c);
 
         gen.setContext(path);
-        if (c.init != null)
+        if (c.init != null) {
             init = gen.api.generateStatement(c.init);
+        }
 
         if( c.constructor != null ) {
             code = gen.api.generateStatement(c.constructor.get().expr());
