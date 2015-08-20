@@ -47,9 +47,9 @@ define([::dependencyNames::],
         }
 
         var data = {
-            packageName: name.replace('.', '_'),
+            packageName: name,
             path: path,
-            dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '_'))].join(', '),
+            dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '/'))].join(', '),
             dependencyVars: [for (k in depKeys) k.replace('.', '_')].join(', '),
             members: [for (member in memberValues) formatMember(member)].join(',\n\t\t'),
             singleMember: ""

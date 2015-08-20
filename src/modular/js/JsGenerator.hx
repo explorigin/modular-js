@@ -31,9 +31,9 @@ require([::dependencyNames::],
 		var depKeys = [for (k in dependencies.keys()) k];
 
 		var data = {
-			packageName: name.replace('.', '_'),
+			packageName: name,
 			path: path,
-			dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '_'))].join(', '),
+			dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '/'))].join(', '),
 			dependencyVars: [for (k in depKeys) k.replace('.', '_')].join(', '),
 		};
 		var _code = pre.execute(data);
@@ -423,7 +423,11 @@ class JsGenerator
 		}
 
 		if (hasFeature("use.$bind")) {
-			print("var $_, $fid = 0;
+			// Haxe uses its own caching bind method.  It's faster, but less standard than Function.bind.
+			// This version is just a decompressed view so it's easier to read.
+			// https://github.com/HaxeFoundation/haxe/issues/1349
+			// http://stackoverflow.com/a/17638540/1732990
+			print("var $fid = 0;
 $bind = function $bind(o,m) {
 	if( m == null ) { return null; }
 	if( m.__id__ == null ) { m.__id__ = $fid++; }
@@ -463,8 +467,10 @@ $bind = function $bind(o,m) {
 			if (pack != mainPack) {
 				curBuf = new StringBuf();
 				var outputDir = Path.directory(FileSystem.absolutePath(api.outputFile));
-				var filename = pack.name.replace('.', '_');
-				filePath = Path.join([outputDir, '$filename.js']);
+				var filename = pack.name.replace('.', '/');
+				filePath = Path.join([outputDir, filename]);
+				FileSystem.createDirectory(Path.directory(filePath));
+				filePath += '.js';
 			} else {
 				continue;
 			}
