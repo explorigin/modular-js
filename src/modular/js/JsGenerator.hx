@@ -65,6 +65,7 @@ class JsGenerator
 	var externNames = new StringMap<Bool>();
 	var typeFinder = ~/\/\* "([A-Za-z0-9._]+)" \*\//g;
 	var jsStubPath:String;
+	var outputDir:String;
 
 	public function new(api) {
 		this.api = api;
@@ -81,6 +82,8 @@ class JsGenerator
 				break;
 			}
 		}
+
+		outputDir = Path.directory(FileSystem.absolutePath(api.outputFile));
 	}
 
 	public function addFeature(name:String):Bool {
@@ -157,8 +160,15 @@ class JsGenerator
 		}
 	}
 
-	function print_file(path) {
-		print(sys.io.File.getContent(Path.join([jsStubPath, path])));
+	function depend_on_file(path, ?pack) {
+		if (pack != null) {
+			addDependency(path, pack);
+		}
+
+		sys.io.File.saveContent(
+			Path.join([outputDir, path + '.js']),
+			sys.io.File.getContent(Path.join([jsStubPath, path + '.js'])));
+
 	}
 
 	function print(str=''){
@@ -255,81 +265,6 @@ class JsGenerator
 		}
 	}
 
-	function cleanPackageDependencies(message="") {
-		// Remove dependencies to non-existent packages
-		var packageNames = [for (pack in packages) pack.path];
-		for (pack in packages) {
-			for (dep in pack.dependencies.keys()) {
-				if (packageNames.indexOf(dep) == -1) {
-					Context.warning('Removing dependency "$dep" from "${pack.name}".  $message', Context.currentPos());
-					pack.dependencies.remove(dep);
-				}
-			}
-		}
-	}
-
-	function checkForCyclicPackageDependencies():Array<String> {
-		// Check packages for cyclic dependencies
-		for( pack in packages.iterator() ) {
-			var alreadyChecked = [pack.path];
-			var depQueue = [for (dep in pack.dependencies.keys()) {path: dep, depPath: [pack.path]} ];
-
-			while (depQueue.length > 0) {
-				var dep = depQueue.shift();
-
-				if (dep.path == pack.path) {
-					Context.warning('${pack.name} is cyclically dependent along: ' + dep.depPath.join(' -> '), Context.currentPos());
-					return dep.depPath;
-				}
-
-				if (alreadyChecked.indexOf(dep.path) != -1) {
-					continue;
-				}
-
-				if (packages.exists(dep.path)) {
-					var depPack = packages.get(dep.path);
-					for (packDepKey in depPack.dependencies.keys()) {
-						var queueStruct = {path: packDepKey, depPath: dep.depPath.concat([dep.path])}
-						if (depQueue.indexOf(queueStruct) == -1) {
-							depQueue.push(queueStruct);
-						}
-					}
-				} else {
-					Context.error('\tDepends on unknown module "$dep"', Context.currentPos());
-				}
-				alreadyChecked.push(dep.path);
-			}
-		}
-		return [];
-	}
-
-	function joinPackages(a:Package, b:Package):Package {
-		Context.warning('Joining packages ${a.path} and ${b.path}', Context.currentPos());
-		for (member in a.members.keys()) {
-			if (b.members.exists(member)) {
-				Context.error('Cannot join packages ${a.path} and ${b.path} because they both have a member named $member.', Context.currentPos());
-			}
-			b.members.set(member, a.members.get(member));
-		}
-		b.code += '\n' + a.code;
-
-		b.collectDependencies();
-		return b;
-	}
-
-	function joinCyclicPackages() {
- 		var cyclicPackages = [for (packName in checkForCyclicPackageDependencies()) packages.get(packName)];
-		while(cyclicPackages.length != 0) {
-			var finalPackage = cyclicPackages.slice(1).fold(joinPackages, cyclicPackages[0]);
-			cyclicPackages = cyclicPackages.slice(1);
-			for (pack in cyclicPackages) {
-				packages.set(pack.path, finalPackage);
-				finalPackage.dependencies.remove(pack.path);
-			}
-			cyclicPackages = [for (packName in checkForCyclicPackageDependencies()) packages.get(packName)];
-		}
-	}
-
 	function replaceType(f:EReg):String {
 		var m = f.matched(1);
 		var pack = packages.get(currentContext[0]);
@@ -407,18 +342,13 @@ class JsGenerator
 		}
 
 		purgeEmptyPackages();
-		cleanPackageDependencies("Assuming a global dependency.");
-		joinCyclicPackages();
 
 		// Replace type comments
 		for( pack in packages.iterator() ) {
 			replaceTypeComments(pack);
 		}
 
-		cleanPackageDependencies("It has been superceded by another dependency.");
-
 		// Loop through the created packages.
-		var outputDir = Path.directory(FileSystem.absolutePath(api.outputFile));
 		for( pack in packages ) {
 			var filePath:String;
 
@@ -438,28 +368,19 @@ class JsGenerator
 			sys.io.File.saveContent(filePath, curBuf.toString());
 		}
 
-		var code = mainPack.getCode();
 		curBuf = mainBuf;
 
 		print("self['$hxClasses'] = {};");
 
-		if (hasFeature("has.enum")) {
-			print_file('enum_stub.js');
+		if (hasFeature('has.enum')) {
+			depend_on_file('enum_stub', mainPack);
 		}
 
-		if (hasFeature("use.$iterator")) {
-			addFeature("use.$bind");
+		depend_on_file('iterator_stub');
+		depend_on_file('bind_stub');
+		depend_on_file('extend_stub');
 
-			print_file('iterator_stub.js');
-		}
-
-		if (hasFeature("use.$bind")) {
-			print_file('bind_stub.js');
-		}
-
-		if (hasFeature("class.inheritance")) {
-			print_file('extend_stub.js');
-		}
+		var code = mainPack.getCode();
 
 		for( pack in packages ) {
 			for (member in pack.members) {

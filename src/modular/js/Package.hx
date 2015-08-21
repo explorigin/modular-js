@@ -78,11 +78,11 @@ define([::dependencyNames::],
         code += post.execute(data);
 
         if (code.indexOf("$bind(") != -1) {
-            gen.addFeature("use.$bind");
+            gen.addDependency('bind_stub');
         }
 
         if (code.indexOf("$iterator(") != -1) {
-            gen.addFeature("use.$iterator");
+            gen.addDependency('iterator_stub');
         }
 
         return code;
