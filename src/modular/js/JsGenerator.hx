@@ -64,6 +64,7 @@ class JsGenerator
 	var external = false;
 	var externNames = new StringMap<Bool>();
 	var typeFinder = ~/\/\* "([A-Za-z0-9._]+)" \*\//g;
+	var jsStubPath:String;
 
 	public function new(api) {
 		this.api = api;
@@ -71,6 +72,15 @@ class JsGenerator
 		curBuf = mainBuf;
 
 		api.setTypeAccessor(getType);
+
+		for (cp in Context.getClassPath()) {
+			var path = FileSystem.absolutePath(cp);
+			var index = path.indexOf('modular-js');
+			if (index != -1) {
+				jsStubPath = path.substr(0, index) + 'modular-js/js';
+				break;
+			}
+		}
 	}
 
 	public function addFeature(name:String):Bool {
@@ -147,8 +157,13 @@ class JsGenerator
 		}
 	}
 
-	inline function print(str){
+	function print_file(path) {
+		print(sys.io.File.getContent(Path.join([jsStubPath, path])));
+	}
+
+	function print(str=''){
 		curBuf.add(str);
+		curBuf.add('\n');
 	}
 
 	public function getPath( t : BaseType ) {
@@ -402,71 +417,13 @@ class JsGenerator
 
 		cleanPackageDependencies("It has been superceded by another dependency.");
 
-		if (hasFeature('Type.resolveClass') || hasFeature('Type.resolveEnum')) {
-			print("window.$hxClasses = {};");
-		}
-
-		if (hasFeature("has.enum")) {
-			print("$estr = function $estr() { return js.Boot.__string_rec(this, ''); };\n");
-		}
-
-		if (hasFeature("use.$iterator")) {
-			addFeature("use.$bind");
-			print("function $iterator(o) {
-	if( o instanceof Array ) {
-		return function() {
-			return HxOverrides.iter(o);
-		};
-	}
-	return typeof(o.iterator) == 'function' ? $bind(o,o.iterator) : o.iterator;
-}\n");
-		}
-
-		if (hasFeature("use.$bind")) {
-			// Haxe uses its own caching bind method.  It's faster, but less standard than Function.bind.
-			// This version is just a decompressed view so it's easier to read.
-			// https://github.com/HaxeFoundation/haxe/issues/1349
-			// http://stackoverflow.com/a/17638540/1732990
-			print("var $fid = 0;
-$bind = function $bind(o,m) {
-	if( m == null ) { return null; }
-	if( m.__id__ == null ) { m.__id__ = $fid++; }
-	var f;
-	if( o.hx__closures__ == null ) {
-		o.hx__closures__ = {};
-	} else {
-		f = o.hx__closures__[m.__id__];
-	}
-	if( f == null ) {
-		f = function(){
-			return f.method.apply(f.scope, arguments);
-		};
-		f.scope = o;
-		f.method = m;
-		o.hx__closures__[m.__id__] = f;
-	}
-	return f;
-}\n");
-		}
-
-		if (hasFeature("class.inheritance")) {
-			print("$extend = function $extend(from, fields) {
-	function Inherit() {};
-	Inherit.prototype = from;
-	var proto = new Inherit();
-	for (var name in fields) proto[name] = fields[name];
-	if(fields.toString !== Object.prototype.toString) proto.toString = fields.toString;
-	return proto;
-};\n");
-		}
-
 		// Loop through the created packages.
+		var outputDir = Path.directory(FileSystem.absolutePath(api.outputFile));
 		for( pack in packages ) {
 			var filePath:String;
 
 			if (pack != mainPack) {
 				curBuf = new StringBuf();
-				var outputDir = Path.directory(FileSystem.absolutePath(api.outputFile));
 				var filename = pack.name.replace('.', '/');
 				filePath = Path.join([outputDir, filename]);
 				FileSystem.createDirectory(Path.directory(filePath));
@@ -484,16 +441,35 @@ $bind = function $bind(o,m) {
 		var code = mainPack.getCode();
 		curBuf = mainBuf;
 
+		print("self['$hxClasses'] = {};");
+
+		if (hasFeature("has.enum")) {
+			print_file('enum_stub.js');
+		}
+
+		if (hasFeature("use.$iterator")) {
+			addFeature("use.$bind");
+
+			print_file('iterator_stub.js');
+		}
+
+		if (hasFeature("use.$bind")) {
+			print_file('bind_stub.js');
+		}
+
+		if (hasFeature("class.inheritance")) {
+			print_file('extend_stub.js');
+		}
+
 		for( pack in packages ) {
 			for (member in pack.members) {
 				if (member.init != "") {
-					print('\n// Init code for ${member.name}\n');
+					print('\n// Init code for ${member.name}');
 					print(member.init);
-					print('\n');
+					print();
 				}
 			}
 		}
-		print('\n');
 
 		print(code);
 		sys.io.File.saveContent(FileSystem.absolutePath(api.outputFile), curBuf.toString());
