@@ -37,7 +37,6 @@ define([::dependencyNames::],
         //  Collect the package's dependencies into one array
         var allDeps = new StringMap();
         var memberValues = [for (member in members.iterator()) member];
-        var depKeys = [for (k in dependencies.keys()) k];
 
         function formatMember(m: IKlass) {
             var name = m.name;
@@ -47,14 +46,9 @@ define([::dependencyNames::],
         }
 
         var data = {
-            packageName: name,
-            path: path,
-            dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '/'))].join(', '),
-            dependencyVars: [for (k in depKeys) k.replace('.', '_')].join(', '),
             members: [for (member in memberValues) formatMember(member)].join(',\n\t\t'),
             singleMember: ""
         };
-        code = pre.execute(data);
 
         for (member in members) {
             code += member.getCode().indent(1);
@@ -78,12 +72,20 @@ define([::dependencyNames::],
         code += post.execute(data);
 
         if (code.indexOf("$bind(") != -1) {
-            gen.addDependency('bind_stub');
+            gen.addDependency('bind_stub', this);
         }
 
         if (code.indexOf("$iterator(") != -1) {
-            gen.addDependency('iterator_stub');
+            gen.addDependency('iterator_stub', this);
         }
+
+        var depKeys = [for (k in dependencies.keys()) k];
+        var preData = {
+            packageName: name,
+            dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '/'))].join(', '),
+            dependencyVars: [for (k in depKeys) k.replace('.', '_')].join(', '),
+        };
+        code = pre.execute(preData) + code;
 
         return code;
     }

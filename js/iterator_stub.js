@@ -1,5 +1,5 @@
-require(['HxOverrides', 'bind_stub'], function(HxOverrides) {
-    self['$iterator'] = function $iterator(o) {
+define(['HxOverrides', 'bind_stub'], function(HxOverrides) {
+    return self['$iterator'] = function $iterator(o) {
         if( o instanceof Array ) {
             return function() {
                 return HxOverrides.iter(o);

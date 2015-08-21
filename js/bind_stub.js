@@ -3,9 +3,10 @@
 // https://github.com/HaxeFoundation/haxe/issues/1349
 // http://stackoverflow.com/a/17638540/1732990
 
-self["$bind"] = (function() {
+define(function() {
     var $fid = 0;
-    return function $bind(obj, method) {
+
+    return self["$bind"] = function $bind(obj, method) {
         var func, mId;
 
         if( method == null ) { return null; }
@@ -26,4 +27,4 @@ self["$bind"] = (function() {
         }
         return func;
     };
-})();
+});

@@ -130,7 +130,7 @@ class Klass extends Module implements IKlass {
             interfaces = [for (i in c.interfaces) gen.getTypeFromPath(gen.getPath(i.t.get()))];
         }
         if( c.superClass != null ) {
-            gen.addDependency('extend_stub');
+            gen.addDependency('extend_stub', this);
             superClass = gen.getTypeFromPath(gen.getPath(c.superClass.t.get()));
         }
         for (dep in gen.getDependencies().keys()) {
