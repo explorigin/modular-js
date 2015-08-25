@@ -83,7 +83,7 @@ define([::dependencyNames::],
         var preData = {
             packageName: name,
             dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '/'))].join(', '),
-            dependencyVars: [for (k in depKeys) k.replace('.', '_')].join(', '),
+            dependencyVars: [for (k in depKeys) k.replace('.', '_').replace('/', '_')].join(', '),
         };
         code = pre.execute(preData) + code;
 

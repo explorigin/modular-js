@@ -6,7 +6,10 @@ import haxe.macro.Type;
 import haxe.macro.Expr;
 import haxe.macro.*;
 import haxe.ds.*;
+import haxe.crypto.Base64;
+import haxe.crypto.Md5;
 import haxe.io.Path;
+import haxe.io.Bytes;
 import sys.FileSystem;
 
 using Lambda;
@@ -34,6 +37,7 @@ class JsGenerator
 	var external = false;
 	var externNames = new StringMap<Bool>();
 	var typeFinder = ~/\/\* "([A-Za-z0-9._]+)" \*\//g;
+	var resourceFinder = ~/Resource\.get(String|Bytes)\("([A-Za-z0-9\/._]+)"\)/g; // "
 	var jsStubPath:String;
 	var outputDir:String;
 
@@ -235,6 +239,17 @@ class JsGenerator
 		}
 	}
 
+	function addResourceDependency(f:EReg):String {
+		var m = f.matched(2);
+		var encodedName = Md5.encode(m);
+		var pack = packages.get(currentContext[0]);
+		var memberName = m.substring(m.lastIndexOf('.') + 1);
+
+		addDependency('_resources/$encodedName', pack);
+
+		return m;
+	}
+
 	function replaceType(f:EReg):String {
 		var m = f.matched(1);
 		var pack = packages.get(currentContext[0]);
@@ -272,6 +287,7 @@ class JsGenerator
 	function replaceTypeComments(pack:Package) {
 		currentContext = [pack.path];
 		pack.code = typeFinder.map(pack.code, replaceType);
+		resourceFinder.map(pack.code, addResourceDependency);
 
 		for (klsKey in pack.members.keys() ) {
 			var kls = pack.members.get(klsKey);
@@ -279,10 +295,13 @@ class JsGenerator
 			currentContext = [pack.path, klsKey];
 			for (field in kls.members.iterator()) {
 				field.code = typeFinder.map(field.code, replaceType);
+				resourceFinder.map(field.code, addResourceDependency);
 			}
 			kls.code = typeFinder.map(kls.code, replaceType);
+			resourceFinder.map(kls.code, addResourceDependency);
 			if (kls.init != null)
 				kls.init = typeFinder.map(kls.init, replaceType);
+				resourceFinder.map(kls.code, addResourceDependency);
 			if (kls.superClass != null) {
 				kls.superClass = typeFinder.map(kls.superClass, replaceType);
 			}
@@ -354,6 +373,11 @@ class JsGenerator
 
 		for( pack in packages ) {
 			for (member in pack.members) {
+				// Handle Resources separately
+				if (member.name == "Resource") {
+					continue;
+				}
+
 				if (member.init != "") {
 					print('\n// Init code for ${member.name}');
 					print(member.init);
@@ -364,6 +388,28 @@ class JsGenerator
 
 		print(code);
 		sys.io.File.saveContent(FileSystem.absolutePath(api.outputFile), curBuf.toString());
+
+		// Handle Resources
+		var resources = Context.getResources();
+		var resourceDir = Path.join([outputDir, '_resources']);
+		if (resources.keys().hasNext()) {
+			FileSystem.createDirectory(resourceDir);
+		}
+		for (name in resources.keys()) {
+			var encodedName = Md5.encode(name);
+			var data = Base64.encode(resources.get(name));
+			sys.io.File.saveContent(
+				Path.join([resourceDir, '$encodedName.js']),
+				'define(["haxe/Resource"], function(Resource) {
+	// Resource: $name
+	var data = "$data";
+	if (Resource.content == null) {
+		Resource.content = [];
+	}
+	Resource.content.push({name:"$name", data:data});
+	return data;
+});');
+		}
 	}
 
 	#if macro
