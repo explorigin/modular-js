@@ -1,6 +1,6 @@
 # Modular Javascript - A Custom Javascript Generator for Haxe
 
-Quite simply, the modular-js generator will output AMD modules for each class in your Haxe application.
+Quite simply, the modular-js generator will output AMD modules for each class in your Haxe application.  The filename is generated from the parent package of each class.
 
 ## Usage
 
@@ -22,7 +22,7 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 
   There are many good reasons to split your project into modules.
 
-  - The vast majority of websites have multiple entry-points. Javascript modules allow you to share code between these entry-points and with web-workers.
+  - The vast majority of websites have multiple entry-points (web pages). Javascript modules allow you to share code between these entry-points and with web-workers.
   - There is less code to push to the browser when you publish updates.
   - Debugging is easier because files are logically separated.
   - Processing your Javascript is easier with tools like [Webpack](http://webpack.github.io/) or [Browserify](http://browserify.org/).
@@ -38,7 +38,5 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 
 ## TODO
 
- - Support external dependencies (with @:jsRequire)
- - Meta-data to customize module building since DCE is a little too strong
  - ES6 Modules
  - CommonJS Modules
