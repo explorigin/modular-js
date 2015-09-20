@@ -16,13 +16,15 @@ Quite simply, the modular-js generator will output AMD modules for each class in
   -lib modular-js
   ```
 
+3. You must specify all of the classes of all the dynamic entry points in your hxml file. This tells the compiler to consider each class for Dead Code Elimination when outputting the files of the Haxe Standard Library.
+
 ## FAQ
 
 1. Why would you do this?
 
   There are many good reasons to split your project into modules.
 
-  - The vast majority of websites have multiple entry-points (web pages). Javascript modules allow you to share code between these entry-points and with web-workers.
+  - The vast majority of websites have multiple entry-points (web pages). Javascript modules allow you to share code between these entry-points, with existing code and with web-workers.
   - There is less code to push to the browser when you publish updates.
   - Debugging is easier because files are logically separated.
   - Processing your Javascript is easier with tools like [Webpack](http://webpack.github.io/) or [Browserify](http://browserify.org/).
@@ -31,10 +33,10 @@ Quite simply, the modular-js generator will output AMD modules for each class in
 
   In short, no.  The longer answer is, if your server is configured to use SPDY or HTTPS2 and your target browser audience [supports one of them](http://caniuse.com/#feat=spdy), then the slow-down caused by multiple files is not even worth mentioning. To learn more about techniques of making your website load quickly, watch Jake Archibald's talk [here](https://vimeo.com/125479288).
 
-## Caveats
+## Known Issues
 
-- If you use Dead Code Elimination, you might end up with module files that do not include the functions you use in other modules that rely on them.  Generally speaking, DCE doesn't work well with modular-js.  Only use it in a controlled manner or not at all.
-- Using `-debug` will not generate source-maps.  (But the javascript output is uncompressed and very readable so fixing this is a low priority)
+- Using `-debug` will not generate source-maps. (But the javascript output is uncompressed and
+  very readable so fixing this is a low priority.)
 
 ## TODO
 
