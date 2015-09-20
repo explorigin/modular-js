@@ -12,5 +12,5 @@ interface IKlass {
     public function getCode():String;
     public function isEmpty():Bool;
     var members: StringMap<IField>;
+    var globalInit:Bool;
 }
-

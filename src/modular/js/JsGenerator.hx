@@ -14,6 +14,7 @@ import sys.FileSystem;
 
 using Lambda;
 using StringTools;
+using DateTools;
 
 enum Forbidden {
 	prototype;
@@ -139,7 +140,7 @@ class JsGenerator
 			addDependency(path, pack);
 		}
 
-		sys.io.File.saveContent(
+		saveContent(
 			Path.join([outputDir, path + '.js']),
 			sys.io.File.getContent(Path.join([jsStubPath, path + '.js'])));
 
@@ -148,6 +149,21 @@ class JsGenerator
 	function print(str=''){
 		curBuf.add(str);
 		curBuf.add('\n');
+	}
+
+	function saveContent(path, data, overwrite=false) {
+		if (FileSystem.exists(path) && overwrite == false) {
+			var newHash = Md5.encode(data);
+			var oldHash = Md5.encode(sys.io.File.getContent(path));
+			var now = Date.now().format("%s");
+			var newPath = '$path.$now';
+
+			if (oldHash != newHash) {
+				Context.warning('File already exists at $path. Saving to $newPath.', Context.currentPos());
+				path = newPath;
+			}
+		}
+		sys.io.File.saveContent(path, data);
 	}
 
 	public function getPath( t : BaseType ) {
@@ -354,7 +370,7 @@ class JsGenerator
 			print(pack.getCode());
 
 			// Put it all in a file.
-			sys.io.File.saveContent(filePath, curBuf.toString());
+			saveContent(filePath, curBuf.toString());
 		}
 
 		curBuf = mainBuf;
@@ -377,8 +393,7 @@ class JsGenerator
 				if (member.name == "Resource") {
 					continue;
 				}
-
-				if (member.init != "") {
+				if (member.globalInit) {
 					print('\n// Init code for ${member.name}');
 					print(member.init);
 					print();
@@ -387,7 +402,10 @@ class JsGenerator
 		}
 
 		print(code);
-		sys.io.File.saveContent(FileSystem.absolutePath(api.outputFile), curBuf.toString());
+		saveContent(
+			FileSystem.absolutePath(api.outputFile),
+			curBuf.toString(),
+			true);
 
 		// Handle Resources
 		var resources = Context.getResources();
@@ -398,7 +416,7 @@ class JsGenerator
 		for (name in resources.keys()) {
 			var encodedName = Md5.encode(name);
 			var data = Base64.encode(resources.get(name));
-			sys.io.File.saveContent(
+			saveContent(
 				Path.join([resourceDir, '$encodedName.js']),
 				'define(["haxe/Resource"], function(Resource) {
 	// Resource: $name

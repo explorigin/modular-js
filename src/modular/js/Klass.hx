@@ -44,6 +44,7 @@ class Klass extends Module implements IKlass {
 }::if (superClass != null)::)::end::;
 ::className::.__name__ = "::path::";::end::
 ::foreach statics::::className::::fieldAccessName:: = ::code::;
+::end::::if (init)::::init::
 ::end::
 ');
         function filterMember(member:IField) {
@@ -64,6 +65,7 @@ class Klass extends Module implements IKlass {
             className: name,
             path: path,
             code: code,
+            init: if (!globalInit && init != "") init else "",
             useHxClasses: gen.hasFeature('Type.resolveClass') || gen.hasFeature('Type.resolveEnum'),
             dependencies: [for (key in dependencies.keys()) key],
             interfaces: interfaces.join(','),
@@ -117,6 +119,11 @@ class Klass extends Module implements IKlass {
         gen.setContext(path);
         if (c.init != null) {
             init = gen.api.generateStatement(c.init);
+            if (name == 'Resource') {
+                globalInit = true;
+            } else {
+                globalInit = init.indexOf('$name.') != -1 || name == 'Std';
+            }
         }
 
         if( c.constructor != null ) {

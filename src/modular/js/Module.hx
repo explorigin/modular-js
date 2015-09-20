@@ -13,6 +13,7 @@ class Module {
     public var dependencies: StringMap<String> = new StringMap<String>();
     public var code: String = "";
     public var isStatic:Bool = false;
+    public var globalInit:Bool = false;
 
     public var gen:JsGenerator;
 
