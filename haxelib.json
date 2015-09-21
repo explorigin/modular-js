@@ -4,9 +4,9 @@
     "license": "MIT",
     "tags": ["js", "web", "html5", "haxe", "javascript", "macro", "html", "ufront"],
     "description": "This is a toolkit to export Javascript-target Haxe to Javascript (AMD) modules.",
-    "version": "0.9.0",
+    "version": "0.9.1",
     "classPath": "src/",
-    "releasenote": "AMD modules work for all purely-haxe codebases.",
+    "releasenote": "Add a useful error message for when haxe.CallStack is needed.",
     "contributors": ["explorigin"],
     "dependencies": {
     }
