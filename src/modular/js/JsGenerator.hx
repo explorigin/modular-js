@@ -276,6 +276,9 @@ class JsGenerator
 		} else if (pack.dependencies.exists(m)) {
 			var depPack = packages.get(m);
 
+			if (depPack == null) {
+				Context.error('Could not find module $m. Try including it manually in your .hxml file.', Context.currentPos());
+			}
 			if (!depPack.members.exists(memberName)) {
 				Context.error('${pack.path} depends on $memberName from package ${depPack.path}, ${depPack.path} contains no member by that name.', Context.currentPos());
 			}
