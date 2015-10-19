@@ -53,7 +53,7 @@ class JsGenerator
 			var path = FileSystem.absolutePath(cp);
 			var index = path.indexOf('modular-js');
 			if (index != -1) {
-				jsStubPath = path.substr(0, index) + 'modular-js/js';
+				jsStubPath = Path.join([path, '..', 'js']);
 				break;
 			}
 		}
