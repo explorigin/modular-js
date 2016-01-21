@@ -82,11 +82,20 @@ define([::dependencyNames::],
         var depKeys = [for (k in dependencies.keys()) k];
         var preData = {
             packageName: name,
-            dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '/'))].join(', '),
+            dependencyNames: depKeys.map(getDependencyName).join(', '),
             dependencyVars: [for (k in depKeys) k.replace('.', '_').replace('/', '_')].join(', '),
         };
         code = pre.execute(preData) + code;
 
         return code;
+    }
+
+    function getDependencyName(dependency:String)
+    {
+        var depth = path.split('.').length - 1;
+        var root = depth == 0 ? './' : StringTools.lpad('', '../', depth * 3);
+        dependency = dependency.replace('.', '/');
+        var name = root + dependency;
+        return gen.api.quoteString(name);
     }
 }

@@ -16,7 +16,7 @@ require([::dependencyNames::],
 		var data = {
 			packageName: name,
 			path: path,
-			dependencyNames: [for (k in depKeys) gen.api.quoteString(k.replace('.', '/'))].join(', '),
+			dependencyNames: depKeys.map(getDependencyName).join(', '),
 			dependencyVars: [for (k in depKeys) k.replace('.', '_')].join(', '),
 		};
 		var _code = pre.execute(data);

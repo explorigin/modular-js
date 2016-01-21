@@ -388,7 +388,10 @@ class JsGenerator
 		depend_on_file('bind_stub');
 		depend_on_file('extend_stub');
 
-		var code = mainPack.getCode();
+		var code = '';
+		if(api.main != null) {
+			code = mainPack.getCode();
+		}
 
 		for( pack in packages ) {
 			for (member in pack.members) {
