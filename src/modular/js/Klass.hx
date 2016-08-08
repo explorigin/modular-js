@@ -122,7 +122,8 @@ class Klass extends Module implements IKlass {
             if (name == 'Resource') {
                 globalInit = true;
             } else {
-                globalInit = init.indexOf('$name.') != -1 || name == 'Std';
+                //init.indexOf('$name.') != -1 ||
+                globalInit = name == 'Std';
             }
         }
 

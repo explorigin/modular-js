@@ -92,8 +92,11 @@ define([::dependencyNames::],
 
     function getDependencyName(dependency:String)
     {
+        if (gen.isJSRequire(dependency))
+            return gen.api.quoteString(gen.requireNames.get(dependency).module);
         var depth = path.split('.').length - 1;
         var root = depth == 0 ? './' : StringTools.lpad('', '../', depth * 3);
+        if (dependency == 'react') root = '';
         dependency = dependency.replace('.', '/');
         var name = root + dependency;
         return gen.api.quoteString(name);

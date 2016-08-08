@@ -30,6 +30,7 @@ class JsGenerator
 	var forbidden = new StringMap<Bool>();
 	var baseJSModules : haxe.ds.StringMap<Bool>;
 	public var currentContext = new Array<String>();
+	public var requireNames = new StringMap<{module:String, path:Array<String>}>();
 	var dependencies: StringMap<String> = new StringMap();
 	var assumedFeatures: StringMap<Bool> = new StringMap();
 
@@ -53,7 +54,7 @@ class JsGenerator
 			var path = FileSystem.absolutePath(cp);
 			var index = path.indexOf('modular-js');
 			if (index != -1) {
-				jsStubPath = Path.join([path, '..', 'js']);
+				jsStubPath = jsStubPath = Path.join([path, '..', 'js']);
 				break;
 			}
 		}
@@ -100,9 +101,15 @@ class JsGenerator
 			case TInst(c, _):
 				var name = getPath(c.get());
 				if (c.get().isExtern) {
+					var require = Lambda.find(c.get().meta.get(), function (meta) return meta.name == ':jsRequire');
+					if (require != null)
+					{
+						var path = require.params.map(haxe.macro.ExprTools.getValue);
+						var module = path.shift();
+						requireNames.set(name, {module:module, path:path});
+					}
 					externNames.set(name, true);
 				}
-
 				name;
 			case TEnum(e, _):
 				addFeature("has.enum");
@@ -122,12 +129,20 @@ class JsGenerator
 		return getTypeFromPath(origName);
 	}
 
+	public function isJSRequire(name: String): Bool {
+		return requireNames.exists(name);
+	}
+
 	public function isJSExtern(name: String): Bool {
 		return externNames.exists(name);
 	}
 
 	public function getTypeFromPath(origName: String) {
-		if (isJSExtern(origName)) {
+		if (isJSRequire(origName)) {
+			addDependency(origName);
+			return '/* "$origName" */';
+		}
+		else if (isJSExtern(origName)) {
 			return origName;
 		} else {
 			addDependency(origName);
@@ -151,7 +166,7 @@ class JsGenerator
 		curBuf.add('\n');
 	}
 
-	function saveContent(path, data, overwrite=false) {
+	function saveContent(path, data, overwrite=true) {
 		if (FileSystem.exists(path) && overwrite == false) {
 			var newHash = Md5.encode(data);
 			var oldHash = Md5.encode(sys.io.File.getContent(path));
@@ -234,11 +249,11 @@ class JsGenerator
 					var path = getPath(e);
 				}
 			// case TAbstract(a, _):
-			// 	var name = a.get().name;
-			// 	Context.warning('Skipping over Abstract: $name', Context.currentPos());
+			//  var name = a.get().name;
+			//  Context.warning('Skipping over Abstract: $name', Context.currentPos());
 			// case TType(tt, _):
-			// 	var name = tt.get().name;
-			// 	Context.warning('Skipping over Type: $name', Context.currentPos());
+			//  var name = tt.get().name;
+			//  Context.warning('Skipping over Type: $name', Context.currentPos());
 			default:
 				// Context.error('' + t, Context.currentPos());
 		}
@@ -273,6 +288,12 @@ class JsGenerator
 
 		if (pack.members.exists(m)) {
 			return m;
+		} else if (isJSRequire(m)) {
+			var dep = requireNames.get(m);
+			var type = m.replace('.', '_');
+			if (dep.path.length > 0)
+				type += '.' + dep.path.join('.');
+			return type;
 		} else if (pack.dependencies.exists(m)) {
 			var depPack = packages.get(m);
 
